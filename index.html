@@ -138,16 +138,23 @@
     .card-title { font-size: 1.12rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .card-resume { font-size: 0.9rem; color: var(--text-muted); font-style: italic; line-height: 1.4; }
 
-    /* Mode Compact */
+    /* Mode Liste (ultra-compact) */
     .compact-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 14px; background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.1s;
+      display: flex; align-items: center;
+      padding: 9px 12px; background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 5px; cursor: pointer; transition: background 0.1s;
     }
     .compact-item:hover, .compact-item:active { background: #f1f5f9; }
-    .compact-left { display: flex; flex-direction: column; gap: 2px; }
-    .compact-title { font-weight: 600; font-size: 0.95rem; color: var(--text); }
-    .compact-arrow { color: var(--text-muted); font-size: 0.9rem; }
+    .compact-content {
+      display: flex; align-items: center; gap: 6px; overflow: hidden; width: 100%;
+    }
+    .compact-emojis {
+      font-size: 0.85rem; flex-shrink: 0;
+    }
+    .compact-title {
+      font-weight: 600; font-size: 0.92rem; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
 
     /* Tags cliquables */
     .hashtag-badge {
@@ -444,7 +451,7 @@
     function updateDisplayModeButton() {
       const btn = document.getElementById("btnViewToggle");
       if (displayMode === "cards") {
-        btn.innerText = "▤ Lignes";
+        btn.innerText = "▤ Liste";
         btn.title = "Passer en vue compacte";
       } else {
         btn.innerText = "🗂️ Cartes";
@@ -572,14 +579,15 @@
       if (displayMode === "compact") {
         listEl.innerHTML = filtered.map(f => {
           const cats = getFicheCategories(f);
-          const catBadges = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
+          // Extraction uniquement des emojis de chaque catégorie (ex: "🍽️ Plat" -> "🍽️")
+          const emojis = cats.map(c => c.split(' ')[0]).join(' ');
+
           return `
             <div class="compact-item" onclick="openFicheReader('${f.id}')">
-              <div class="compact-left">
-                <div style="margin-bottom:2px;">${catBadges}</div>
+              <div class="compact-content">
+                <span class="compact-emojis">${emojis}</span>
                 <span class="compact-title">${escapeHtml(f.titre)}</span>
               </div>
-              <span class="compact-arrow">👁️</span>
             </div>
           `;
         }).join('');
