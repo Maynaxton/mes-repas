@@ -25,6 +25,8 @@
       --danger-hover: #dc2626;
       --tag-bg: #e0e7ff;
       --tag-text: #3730a3;
+      --pill-bg: #f1f5f9;
+      --pill-text: #475569;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -65,7 +67,7 @@
       color: white; font-size: 0.75rem; border-radius: 10px; padding: 2px 6px; font-weight: bold;
     }
 
-    /* Animation rotation du bouton rafraîchir */
+    /* Animation rotation rafraîchir */
     #btnRefresh {
       display: inline-flex; align-items: center; justify-content: center;
       transition: background 0.15s, transform 0.4s ease;
@@ -81,15 +83,48 @@
     .view-section { display: none; }
     .view-section.active { display: block; }
 
-    /* Barre d'outils liste des fiches */
+    /* Barre d'outils recherche */
     .fiches-toolbar {
-      display: flex; gap: 8px; margin-bottom: 14px; align-items: center;
+      display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+    }
+    .search-wrapper {
+      position: relative; flex: 1; display: flex; align-items: center;
     }
     .search-input {
-      flex: 1; border: 1px solid var(--border); border-radius: 8px;
-      padding: 10px 12px; font-size: 0.95rem; outline: none; background: var(--card-bg);
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 36px 10px 12px; font-size: 0.95rem; outline: none; background: var(--card-bg);
     }
     .search-input:focus { border-color: var(--primary); }
+    .search-clear-btn {
+      position: absolute; right: 10px; background: none; border: none;
+      color: var(--text-muted); font-size: 1rem; cursor: pointer; display: none;
+      padding: 4px; line-height: 1;
+    }
+    .search-clear-btn:hover { color: var(--text); }
+
+    /* Barre des pilules de catégories (défilement horizontal) */
+    .category-pills-bar {
+      display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .category-pills-bar::-webkit-scrollbar { display: none; }
+    .pill {
+      white-space: nowrap; font-size: 0.8rem; font-weight: 600; padding: 6px 12px;
+      border-radius: 20px; background: var(--pill-bg); color: var(--pill-text);
+      border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .pill.active {
+      background: var(--primary); color: white; border-color: var(--primary);
+    }
+
+    /* Badges de catégorie dans les fiches */
+    .card-categories {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
+    }
+    .cat-badge {
+      font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      background: #f1f5f9; color: #475569;
+    }
 
     /* Mode Détaillé */
     .card {
@@ -100,14 +135,15 @@
     .card-content { white-space: pre-wrap; line-height: 1.5; color: #334155; }
     .card-footer { margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; }
 
-    /* Mode Compact (Lignes simples) */
+    /* Mode Compact */
     .compact-item {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; background: var(--card-bg); border: 1px solid var(--border);
+      padding: 12px 14px; background: var(--card-bg); border: 1px solid var(--border);
       border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.1s;
     }
     .compact-item:hover, .compact-item:active { background: #f1f5f9; }
-    .compact-title { font-weight: 600; font-size: 1rem; color: var(--text); }
+    .compact-left { display: flex; flex-direction: column; gap: 2px; }
+    .compact-title { font-weight: 600; font-size: 0.95rem; color: var(--text); }
     .compact-arrow { color: var(--text-muted); font-size: 0.9rem; }
 
     /* Tags cliquables */
@@ -126,6 +162,10 @@
       padding: 10px; font-size: 1rem; color: var(--text); outline: none;
     }
     .form-group textarea { height: 180px; resize: vertical; }
+
+    .editor-cats-container {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+    }
 
     /* Courses */
     .add-course-bar { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -177,9 +217,15 @@
     <section id="sec-fiches" class="view-section active">
       <!-- Outils de recherche et de bascule de vue -->
       <div class="fiches-toolbar">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher (nom, mot, #tag)..." oninput="handleSearch()">
+        <div class="search-wrapper">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher (nom, mot, #tag)..." oninput="handleSearch()">
+          <button id="btnClearSearch" class="search-clear-btn" onclick="clearSearch()">✕</button>
+        </div>
         <button id="btnViewToggle" class="btn-secondary" title="Changer le mode d'affichage" onclick="toggleDisplayMode()">▤ Liste</button>
       </div>
+
+      <!-- Pilules des filtres de catégories -->
+      <div class="category-pills-bar" id="pillsContainer"></div>
 
       <!-- Bandeau de tag actif -->
       <div id="filterBanner" style="display:none; margin-bottom:12px; padding:8px 12px; background:var(--tag-bg); border-radius:8px; justify-content:space-between; align-items:center;">
@@ -195,8 +241,14 @@
       <div class="card">
         <h2 class="card-title" id="editorTitle">Nouvelle fiche</h2>
         <input type="hidden" id="editFicheId">
+
         <div class="form-group">
-          <label>Titre de la recette / fiche</label>
+          <label>Catégorie(s) de la fiche</label>
+          <div class="editor-cats-container" id="editorCatsContainer"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Titre de la fiche</label>
           <input type="text" id="ficheTitreInput" placeholder="Ex: Sauté de porc au curry">
         </div>
         <div class="form-group">
@@ -254,30 +306,43 @@
 
   <script>
     // ==========================================
-    // CONFIGURATION SUPABASE
+    // CONFIGURATION SUPABASE & CONSTANTES
     // ==========================================
     const SUPABASE_URL = "https://ypaexsldtyksnqamcmqx.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYWV4c2xkdHlrc25xYW1jbXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNDQwMzYsImV4cCI6MjEwNzcyMDAzNn0.-ononJoJx_B21F9l1NkJovBTR2O9TNaDNmckMGgUFQY";
     const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    const CATEGORIES = [
+      "🍽️ Plat",
+      "🥗 Entrée",
+      "🥔 Accompagnement",
+      "💡 Astuce",
+      "👧 Enfant",
+      "🍿 Snack",
+      "🍰 Dessert",
+      "🍸 Apéro"
+    ];
+
     let allFiches = [];
     let currentFilterTag = null;
     let searchQuery = "";
-    let displayMode = localStorage.getItem("displayMode") || "cards"; // 'cards' ou 'compact'
+    let selectedCategories = []; // tableau vide = Tout
+    let editorSelectedCategories = ["🍽️ Plat"];
+    let displayMode = localStorage.getItem("displayMode") || "cards";
 
     // Initialisation
     window.addEventListener("DOMContentLoaded", () => {
-      // Restauration de la vue précédente (fiches, courses, editor) après un refresh
       const savedSection = localStorage.getItem("activeSection") || "fiches";
       showSection(savedSection);
       updateDisplayModeButton();
+      renderCategoryPills();
 
       loadFiches();
       loadCourses();
       listenRealtime();
     });
 
-    // Navigation entre vues avec mémoire de la page active
+    // Navigation entre vues
     function showSection(section) {
       localStorage.setItem("activeSection", section);
       document.querySelectorAll(".view-section").forEach(s => s.classList.remove("active"));
@@ -289,15 +354,12 @@
     async function refreshData() {
       const btn = document.getElementById("btnRefresh");
       if (btn) btn.classList.add("spinning");
-      
       await Promise.all([loadFiches(), loadCourses()]);
-      
       setTimeout(() => {
         if (btn) btn.classList.remove("spinning");
       }, 400);
     }
 
-    // Gestion du temps réel Supabase
     function listenRealtime() {
       client.channel('schema-db-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'fiches' }, () => loadFiches())
@@ -305,7 +367,7 @@
         .subscribe();
     }
 
-    // Bascule du mode d'affichage (Cartes <-> Lignes compactes)
+    // Bascule du mode d'affichage
     function toggleDisplayMode() {
       displayMode = (displayMode === "cards") ? "compact" : "cards";
       localStorage.setItem("displayMode", displayMode);
@@ -317,16 +379,62 @@
       const btn = document.getElementById("btnViewToggle");
       if (displayMode === "cards") {
         btn.innerText = "▤ Lignes";
-        btn.title = "Passer en vue compacte (liste de noms)";
+        btn.title = "Passer en vue compacte";
       } else {
         btn.innerText = "🗂️ Cartes";
-        btn.title = "Passer en vue cartes détaillées";
+        btn.title = "Passer en vue détaillée";
       }
     }
 
-    // Recherche libre
+    // ==========================================
+    // GESTION DES PILULES DE FILTRES
+    // ==========================================
+    function renderCategoryPills() {
+      const container = document.getElementById("pillsContainer");
+      const isAllActive = selectedCategories.length === 0;
+
+      let html = `<div class="pill ${isAllActive ? 'active' : ''}" onclick="toggleCategoryFilter('ALL')">Tout</div>`;
+
+      html += CATEGORIES.map(cat => {
+        const active = selectedCategories.includes(cat);
+        return `<div class="pill ${active ? 'active' : ''}" onclick="toggleCategoryFilter('${cat}')">${cat}</div>`;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function toggleCategoryFilter(cat) {
+      if (cat === 'ALL') {
+        selectedCategories = [];
+      } else {
+        if (selectedCategories.includes(cat)) {
+          selectedCategories = selectedCategories.filter(c => c !== cat);
+        } else {
+          selectedCategories.push(cat);
+        }
+      }
+      renderCategoryPills();
+      renderFiches();
+    }
+
+    // ==========================================
+    // RECHERCHE LIBRE + CROIX D'EFFACEMENT
+    // ==========================================
     function handleSearch() {
-      searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+      const input = document.getElementById("searchInput");
+      const clearBtn = document.getElementById("btnClearSearch");
+      searchQuery = input.value.trim().toLowerCase();
+
+      clearBtn.style.display = input.value.length > 0 ? "block" : "none";
+      renderFiches();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById("searchInput");
+      input.value = "";
+      searchQuery = "";
+      document.getElementById("btnClearSearch").style.display = "none";
+      input.focus();
       renderFiches();
     }
 
@@ -340,16 +448,30 @@
       renderFiches();
     }
 
+    function getFicheCategories(f) {
+      if (Array.isArray(f.categories) && f.categories.length > 0) return f.categories;
+      if (f.categorie) return [f.categorie];
+      return ["🍽️ Plat"];
+    }
+
     function renderFiches() {
       const listEl = document.getElementById("fichesList");
       let filtered = allFiches;
 
-      // Filtre mot-clé (#tag cliqué)
+      // 1. Filtrage par Catégories (sélection multiple)
+      if (selectedCategories.length > 0) {
+        filtered = filtered.filter(f => {
+          const cats = getFicheCategories(f);
+          return cats.some(c => selectedCategories.includes(c));
+        });
+      }
+
+      // 2. Filtrage mot-clé hashtag cliqué
       if (currentFilterTag) {
         filtered = filtered.filter(f => f.contenu.toLowerCase().includes(currentFilterTag.toLowerCase()));
       }
 
-      // Filtre de recherche libre (titre OU contenu)
+      // 3. Filtrage barre de recherche libre
       if (searchQuery) {
         filtered = filtered.filter(f => 
           f.titre.toLowerCase().includes(searchQuery) || 
@@ -362,32 +484,37 @@
         return;
       }
 
-      // Affichage selon le mode sélectionné
       if (displayMode === "compact") {
-        // Mode 1 seule ligne par fiche
-        listEl.innerHTML = filtered.map(f => `
-          <div class="compact-item" onclick="openFichePreview('${f.id}')">
-            <span class="compact-title">${escapeHtml(f.titre)}</span>
-            <span class="compact-arrow">✏️</span>
-          </div>
-        `).join('');
-      } else {
-        // Mode Cartes complètes
-        listEl.innerHTML = filtered.map(f => `
-          <div class="card">
-            <div class="card-title">${escapeHtml(f.titre)}</div>
-            <div class="card-content">${formatHashtags(f.contenu)}</div>
-            <div class="card-footer">
-              <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="editFiche('${f.id}')">✏️ Modifier</button>
-              <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; color:var(--danger);" onclick="deleteFiche('${f.id}')">Supprimer</button>
+        listEl.innerHTML = filtered.map(f => {
+          const cats = getFicheCategories(f);
+          const catBadges = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
+          return `
+            <div class="compact-item" onclick="editFiche('${f.id}')">
+              <div class="compact-left">
+                <div style="margin-bottom:2px;">${catBadges}</div>
+                <span class="compact-title">${escapeHtml(f.titre)}</span>
+              </div>
+              <span class="compact-arrow">✏️</span>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
+      } else {
+        listEl.innerHTML = filtered.map(f => {
+          const cats = getFicheCategories(f);
+          const catBadges = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
+          return `
+            <div class="card">
+              <div class="card-categories">${catBadges}</div>
+              <div class="card-title">${escapeHtml(f.titre)}</div>
+              <div class="card-content">${formatHashtags(f.contenu)}</div>
+              <div class="card-footer">
+                <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="editFiche('${f.id}')">✏️ Modifier</button>
+                <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; color:var(--danger);" onclick="deleteFiche('${f.id}')">Supprimer</button>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
-    }
-
-    function openFichePreview(id) {
-      editFiche(id);
     }
 
     function formatHashtags(text) {
@@ -424,11 +551,35 @@
       renderFiches();
     }
 
+    // ==========================================
+    // ÉDITION / CRÉATION DE FICHE
+    // ==========================================
+    function renderEditorCategories() {
+      const container = document.getElementById("editorCatsContainer");
+      container.innerHTML = CATEGORIES.map(cat => {
+        const active = editorSelectedCategories.includes(cat);
+        return `<div class="pill ${active ? 'active' : ''}" onclick="toggleEditorCategory('${cat}')">${cat}</div>`;
+      }).join('');
+    }
+
+    function toggleEditorCategory(cat) {
+      if (editorSelectedCategories.includes(cat)) {
+        if (editorSelectedCategories.length > 1) {
+          editorSelectedCategories = editorSelectedCategories.filter(c => c !== cat);
+        }
+      } else {
+        editorSelectedCategories.push(cat);
+      }
+      renderEditorCategories();
+    }
+
     function openNewFiche() {
       document.getElementById("editFicheId").value = "";
       document.getElementById("editorTitle").innerText = "Nouvelle fiche";
       document.getElementById("ficheTitreInput").value = "";
       document.getElementById("ficheContenuInput").value = "";
+      editorSelectedCategories = ["🍽️ Plat"];
+      renderEditorCategories();
       showSection("editor");
     }
 
@@ -439,6 +590,8 @@
       document.getElementById("editorTitle").innerText = "Modifier la fiche";
       document.getElementById("ficheTitreInput").value = f.titre;
       document.getElementById("ficheContenuInput").value = f.contenu;
+      editorSelectedCategories = getFicheCategories(f);
+      renderEditorCategories();
       showSection("editor");
     }
 
@@ -446,13 +599,14 @@
       const id = document.getElementById("editFicheId").value;
       const titre = document.getElementById("ficheTitreInput").value.trim();
       const contenu = document.getElementById("ficheContenuInput").value.trim();
+      const categories = editorSelectedCategories;
 
       if (!titre || !contenu) { alert("Le titre et le contenu sont requis."); return; }
 
       if (id) {
-        await client.from('fiches').update({ titre, contenu }).eq('id', id);
+        await client.from('fiches').update({ titre, contenu, categories }).eq('id', id);
       } else {
-        await client.from('fiches').insert([{ titre, contenu }]);
+        await client.from('fiches').insert([{ titre, contenu, categories }]);
       }
       showSection("fiches");
       loadFiches();
@@ -465,7 +619,7 @@
     }
 
     // ==========================================
-    // GESTION DE LA LISTE DE COURSES
+    // LISTE DE COURSES
     // ==========================================
     async function loadCourses() {
       const { data, error } = await client.from('courses').select('*').order('created_at', { ascending: true });
@@ -531,7 +685,7 @@
       loadCourses();
     }
 
-    // Utilitaires Modales & Formatage
+    // Utilitaires
     function openModal(id) { document.getElementById(id).classList.add("active"); }
     function closeModal(id) { document.getElementById(id).classList.remove("active"); }
     function escapeHtml(text) {
