@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>C'est l'heure de bien manger</title>
+  
+  <!-- Icône de raccourci smartphone (Assiette & couverts) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
+
   <!-- Client Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -36,7 +41,7 @@
 
     button {
       cursor: pointer; border: none; outline: none; border-radius: 8px;
-      padding: 8px 14px; font-weight: 600; font-size: 0.9rem; transition: background 0.15s;
+      padding: 8px 12px; font-weight: 600; font-size: 0.9rem; transition: background 0.15s;
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-hover); }
@@ -55,10 +60,21 @@
     /* Conteneur principal */
     main { max-width: 680px; margin: 0 auto; padding: 16px; }
 
-    /* Fiches Recettes */
+    /* Vues */
     .view-section { display: none; }
     .view-section.active { display: block; }
 
+    /* Barre d'outils liste des fiches */
+    .fiches-toolbar {
+      display: flex; gap: 8px; margin-bottom: 14px; align-items: center;
+    }
+    .search-input {
+      flex: 1; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; font-size: 0.95rem; outline: none; background: var(--card-bg);
+    }
+    .search-input:focus { border-color: var(--primary); }
+
+    /* Mode Détaillé */
     .card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
       padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -66,6 +82,16 @@
     .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; color: var(--text); }
     .card-content { white-space: pre-wrap; line-height: 1.5; color: #334155; }
     .card-footer { margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* Mode Compact (Lignes simples) */
+    .compact-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.1s;
+    }
+    .compact-item:hover { background: #f1f5f9; }
+    .compact-title { font-weight: 600; font-size: 1rem; color: var(--text); }
+    .compact-arrow { color: var(--text-muted); font-size: 0.9rem; }
 
     /* Tags cliquables */
     .hashtag-badge {
@@ -84,7 +110,7 @@
     }
     .form-group textarea { height: 180px; resize: vertical; }
 
-    /* Liste de courses */
+    /* Courses */
     .add-course-bar { display: flex; gap: 8px; margin-bottom: 16px; }
     .add-course-bar input {
       flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 1rem;
@@ -94,13 +120,13 @@
       padding: 12px; background: var(--card-bg); border: 1px solid var(--border);
       border-radius: 8px; margin-bottom: 8px;
     }
-    .course-left { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .course-left { display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; }
     .course-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
     .course-text.checked { text-decoration: line-through; color: var(--text-muted); }
     .btn-delete-item { background: transparent; color: var(--text-muted); padding: 4px 8px; font-size: 1.1rem; }
     .btn-delete-item:hover { color: var(--danger); }
 
-    /* Modale */
+    /* Modales */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px;
@@ -121,6 +147,7 @@
   <header>
     <div class="brand" onclick="showSection('fiches')">🍽️ Mes Repas</div>
     <div class="header-actions">
+      <button class="btn-secondary" title="Rafraîchir les données" onclick="refreshData()">🔄</button>
       <button class="btn-primary" onclick="openNewFiche()">+ Fiche</button>
       <button class="btn-cart" onclick="showSection('courses')">
         🛒<span id="cartCount" class="cart-badge">0</span>
@@ -131,10 +158,18 @@
   <main>
     <!-- Vue 1 : Liste des fiches -->
     <section id="sec-fiches" class="view-section active">
+      <!-- Outils de recherche et de bascule de vue -->
+      <div class="fiches-toolbar">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher (nom, mot, #tag)..." oninput="handleSearch()">
+        <button id="btnViewToggle" class="btn-secondary" title="Changer le mode d'affichage" onclick="toggleDisplayMode()">▤ Liste</button>
+      </div>
+
+      <!-- Bandeau de tag actif -->
       <div id="filterBanner" style="display:none; margin-bottom:12px; padding:8px 12px; background:var(--tag-bg); border-radius:8px; justify-content:space-between; align-items:center;">
         <span id="filterText" style="font-weight:600; color:var(--tag-text);"></span>
         <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="clearFilter()">Voir tout</button>
       </div>
+
       <div id="fichesList">Chargement des fiches...</div>
     </section>
 
@@ -210,21 +245,32 @@
 
     let allFiches = [];
     let currentFilterTag = null;
-    let selectedTag = "";
+    let searchQuery = "";
+    let displayMode = localStorage.getItem("displayMode") || "cards"; // 'cards' ou 'compact'
 
     // Initialisation
     window.addEventListener("DOMContentLoaded", () => {
+      // Restauration de la vue précédente (fiches, courses, editor) après un refresh
+      const savedSection = localStorage.getItem("activeSection") || "fiches";
+      showSection(savedSection);
+      updateDisplayModeButton();
+
       loadFiches();
       loadCourses();
       listenRealtime();
     });
 
-    // Navigation entre vues
+    // Navigation entre vues avec mémoire de la page active
     function showSection(section) {
+      localStorage.setItem("activeSection", section);
       document.querySelectorAll(".view-section").forEach(s => s.classList.remove("active"));
       if (section === "fiches") document.getElementById("sec-fiches").classList.add("active");
       if (section === "editor") document.getElementById("sec-editor").classList.add("active");
       if (section === "courses") document.getElementById("sec-courses").classList.add("active");
+    }
+
+    async function refreshData() {
+      await Promise.all([loadFiches(), loadCourses()]);
     }
 
     // Gestion du temps réel Supabase
@@ -233,6 +279,31 @@
         .on('postgres_changes', { event: '*', schema: 'public', table: 'fiches' }, () => loadFiches())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'courses' }, () => loadCourses())
         .subscribe();
+    }
+
+    // Bascule du mode d'affichage (Cartes <-> Lignes compactes)
+    function toggleDisplayMode() {
+      displayMode = (displayMode === "cards") ? "compact" : "cards";
+      localStorage.setItem("displayMode", displayMode);
+      updateDisplayModeButton();
+      renderFiches();
+    }
+
+    function updateDisplayModeButton() {
+      const btn = document.getElementById("btnViewToggle");
+      if (displayMode === "cards") {
+        btn.innerText = "▤ Lignes";
+        btn.title = "Passer en vue compacte (liste de noms)";
+      } else {
+        btn.innerText = "🗂️ Cartes";
+        btn.title = "Passer en vue cartes détaillées";
+      }
+    }
+
+    // Recherche libre
+    function handleSearch() {
+      searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+      renderFiches();
     }
 
     // ==========================================
@@ -248,25 +319,52 @@
     function renderFiches() {
       const listEl = document.getElementById("fichesList");
       let filtered = allFiches;
+
+      // Filtre mot-clé (#tag cliqué)
       if (currentFilterTag) {
-        filtered = allFiches.filter(f => f.contenu.toLowerCase().includes(currentFilterTag.toLowerCase()));
+        filtered = filtered.filter(f => f.contenu.toLowerCase().includes(currentFilterTag.toLowerCase()));
+      }
+
+      // Filtre de recherche libre (titre OU contenu)
+      if (searchQuery) {
+        filtered = filtered.filter(f => 
+          f.titre.toLowerCase().includes(searchQuery) || 
+          f.contenu.toLowerCase().includes(searchQuery)
+        );
       }
 
       if (filtered.length === 0) {
-        listEl.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:20px;">Aucune fiche trouvée.</p>`;
+        listEl.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:20px;">Aucune fiche ne correspond.</p>`;
         return;
       }
 
-      listEl.innerHTML = filtered.map(f => `
-        <div class="card">
-          <div class="card-title">${escapeHtml(f.titre)}</div>
-          <div class="card-content">${formatHashtags(f.contenu)}</div>
-          <div class="card-footer">
-            <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="editFiche('${f.id}')">✏️ Modifier</button>
-            <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; color:var(--danger);" onclick="deleteFiche('${f.id}')">Supprimer</button>
+      // Affichage selon le mode sélectionné
+      if (displayMode === "compact") {
+        // Mode 1 seule ligne par fiche
+        listEl.innerHTML = filtered.map(f => `
+          <div class="compact-item" onclick="openFichePreview('${f.id}')">
+            <span class="compact-title">${escapeHtml(f.titre)}</span>
+            <span class="compact-arrow">✏️</span>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      } else {
+        // Mode Cartes complètes
+        listEl.innerHTML = filtered.map(f => `
+          <div class="card">
+            <div class="card-title">${escapeHtml(f.titre)}</div>
+            <div class="card-content">${formatHashtags(f.contenu)}</div>
+            <div class="card-footer">
+              <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="editFiche('${f.id}')">✏️ Modifier</button>
+              <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; color:var(--danger);" onclick="deleteFiche('${f.id}')">Supprimer</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function openFichePreview(id) {
+      // En mode compact, cliquer sur la ligne ouvre directement l'édition
+      editFiche(id);
     }
 
     function formatHashtags(text) {
@@ -277,7 +375,6 @@
     }
 
     function handleTagClick(word) {
-      selectedTag = word;
       document.getElementById("tagModalTitle").innerText = `Mot-clé : #${word}`;
       document.getElementById("btnTagAddToCart").onclick = () => {
         addCourse(word);
