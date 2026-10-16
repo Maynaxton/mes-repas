@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C'est l'heure de bien manger</title>
+  <!-- Client Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --tag-bg: #e0e7ff;
+      --tag-text: #3730a3;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-top: 70px; padding-bottom: 40px; }
+
+    /* Header fixe */
+    header {
+      position: fixed; top: 0; left: 0; right: 0; height: 60px;
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; z-index: 100;
+    }
+    .brand { font-size: 1.1rem; font-weight: 700; color: var(--primary); cursor: pointer; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    button {
+      cursor: pointer; border: none; outline: none; border-radius: 8px;
+      padding: 8px 14px; font-weight: 600; font-size: 0.9rem; transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: var(--danger-hover); }
+
+    .btn-cart {
+      background: #f1f5f9; color: var(--text); position: relative; font-size: 1.1rem; padding: 8px 12px;
+    }
+    .cart-badge {
+      position: absolute; top: -4px; right: -4px; background: var(--primary);
+      color: white; font-size: 0.75rem; border-radius: 10px; padding: 2px 6px; font-weight: bold;
+    }
+
+    /* Conteneur principal */
+    main { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+    /* Fiches Recettes */
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+    .card-content { white-space: pre-wrap; line-height: 1.5; color: #334155; }
+    .card-footer { margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* Tags cliquables */
+    .hashtag-badge {
+      display: inline-block; background: var(--tag-bg); color: var(--tag-text);
+      padding: 2px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;
+      margin: 1px 2px; text-decoration: none;
+    }
+    .hashtag-badge:hover { filter: brightness(0.95); }
+
+    /* Formulaire d'édition */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+    .form-group input, .form-group textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; font-size: 1rem; color: var(--text); outline: none;
+    }
+    .form-group textarea { height: 180px; resize: vertical; }
+
+    /* Liste de courses */
+    .add-course-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+    .add-course-bar input {
+      flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 1rem;
+    }
+    .course-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px; background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 8px;
+    }
+    .course-left { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .course-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+    .course-text.checked { text-decoration: line-through; color: var(--text-muted); }
+    .btn-delete-item { background: transparent; color: var(--text-muted); padding: 4px 8px; font-size: 1.1rem; }
+    .btn-delete-item:hover { color: var(--danger); }
+
+    /* Modale */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--card-bg); border-radius: 12px; padding: 20px;
+      width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
+    .modal-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .modal-buttons-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header fixe -->
+  <header>
+    <div class="brand" onclick="showSection('fiches')">🍽️ Mes Repas</div>
+    <div class="header-actions">
+      <button class="btn-primary" onclick="openNewFiche()">+ Fiche</button>
+      <button class="btn-cart" onclick="showSection('courses')">
+        🛒<span id="cartCount" class="cart-badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Vue 1 : Liste des fiches -->
+    <section id="sec-fiches" class="view-section active">
+      <div id="filterBanner" style="display:none; margin-bottom:12px; padding:8px 12px; background:var(--tag-bg); border-radius:8px; justify-content:space-between; align-items:center;">
+        <span id="filterText" style="font-weight:600; color:var(--tag-text);"></span>
+        <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="clearFilter()">Voir tout</button>
+      </div>
+      <div id="fichesList">Chargement des fiches...</div>
+    </section>
+
+    <!-- Vue 2 : Formulaire Édition/Création -->
+    <section id="sec-editor" class="view-section">
+      <div class="card">
+        <h2 class="card-title" id="editorTitle">Nouvelle fiche</h2>
+        <input type="hidden" id="editFicheId">
+        <div class="form-group">
+          <label>Titre de la recette / fiche</label>
+          <input type="text" id="ficheTitreInput" placeholder="Ex: Sauté de porc au curry">
+        </div>
+        <div class="form-group">
+          <label>Contenu (utilise # pour créer des mots-clés cliquables)</label>
+          <textarea id="ficheContenuInput" placeholder="Ex: Découper le #porc en lamelles. Faire dorer avec du #curry et servir avec du #riz basmati."></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn-secondary" onclick="showSection('fiches')">Annuler</button>
+          <button class="btn-primary" onclick="saveFiche()">Enregistrer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vue 3 : Liste de courses -->
+    <section id="sec-courses" class="view-section">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">🛒 Liste de courses</h2>
+        <div class="add-course-bar">
+          <input type="text" id="newCourseInput" placeholder="Ajouter un article...">
+          <button class="btn-primary" onclick="addCourseManual()">+</button>
+        </div>
+        <div id="coursesList">Chargement...</div>
+        
+        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px; display:flex; justify-content:flex-end;">
+          <button class="btn-danger" onclick="confirmClearCourses()">🗑️ Tout effacer</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modale au clic sur un hashtag -->
+  <div id="tagModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 class="modal-title" id="tagModalTitle">Mot-clé : #...</h3>
+      <p style="font-size:0.9rem; color:var(--text-muted);">Que souhaites-tu faire ?</p>
+      <div class="modal-buttons">
+        <button class="btn-primary" id="btnTagAddToCart">🛒 Ajouter à la liste de courses</button>
+        <button class="btn-secondary" id="btnTagFilter">📄 Voir les fiches associées</button>
+        <button class="btn-secondary" onclick="closeModal('tagModal')">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale confirmation suppression courses -->
+  <div id="clearCoursesModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 class="modal-title">Vider la liste ?</h3>
+      <p style="font-size:0.9rem; color:var(--text-muted);">Es-tu sûr de vouloir effacer tous les éléments de la liste de courses ?</p>
+      <div class="modal-buttons-row">
+        <button class="btn-secondary" onclick="closeModal('clearCoursesModal')">Non</button>
+        <button class="btn-danger" onclick="executeClearCourses()">Oui, tout effacer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION SUPABASE
+    // ==========================================
+    const SUPABASE_URL = "https://ypaexsldtyksnqamcmqx.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYWV4c2xkdHlrc25xYW1jbXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNDQwMzYsImV4cCI6MjEwNzcyMDAzNn0.-ononJoJx_B21F9l1NkJovBTR2O9TNaDNmckMGgUFQY";
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allFiches = [];
+    let currentFilterTag = null;
+    let selectedTag = "";
+
+    // Initialisation
+    window.addEventListener("DOMContentLoaded", () => {
+      loadFiches();
+      loadCourses();
+      listenRealtime();
+    });
+
+    // Navigation entre vues
+    function showSection(section) {
+      document.querySelectorAll(".view-section").forEach(s => s.classList.remove("active"));
+      if (section === "fiches") document.getElementById("sec-fiches").classList.add("active");
+      if (section === "editor") document.getElementById("sec-editor").classList.add("active");
+      if (section === "courses") document.getElementById("sec-courses").classList.add("active");
+    }
+
+    // Gestion du temps réel Supabase
+    function listenRealtime() {
+      client.channel('schema-db-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'fiches' }, () => loadFiches())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'courses' }, () => loadCourses())
+        .subscribe();
+    }
+
+    // ==========================================
+    // GESTION DES FICHES
+    // ==========================================
+    async function loadFiches() {
+      const { data, error } = await client.from('fiches').select('*').order('created_at', { ascending: false });
+      if (error) { console.error(error); return; }
+      allFiches = data || [];
+      renderFiches();
+    }
+
+    function renderFiches() {
+      const listEl = document.getElementById("fichesList");
+      let filtered = allFiches;
+      if (currentFilterTag) {
+        filtered = allFiches.filter(f => f.contenu.toLowerCase().includes(currentFilterTag.toLowerCase()));
+      }
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:20px;">Aucune fiche trouvée.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(f => `
+        <div class="card">
+          <div class="card-title">${escapeHtml(f.titre)}</div>
+          <div class="card-content">${formatHashtags(f.contenu)}</div>
+          <div class="card-footer">
+            <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="editFiche('${f.id}')">✏️ Modifier</button>
+            <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; color:var(--danger);" onclick="deleteFiche('${f.id}')">Supprimer</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function formatHashtags(text) {
+      const safe = escapeHtml(text);
+      return safe.replace(/#([\w\u00C0-\u017F]+)/g, (match, word) => {
+        return `<span class="hashtag-badge" onclick="handleTagClick('${word}')">#${word}</span>`;
+      });
+    }
+
+    function handleTagClick(word) {
+      selectedTag = word;
+      document.getElementById("tagModalTitle").innerText = `Mot-clé : #${word}`;
+      document.getElementById("btnTagAddToCart").onclick = () => {
+        addCourse(word);
+        closeModal("tagModal");
+      };
+      document.getElementById("btnTagFilter").onclick = () => {
+        applyFilter(`#${word}`);
+        closeModal("tagModal");
+      };
+      openModal("tagModal");
+    }
+
+    function applyFilter(tag) {
+      currentFilterTag = tag;
+      document.getElementById("filterText").innerText = `Filtre actif : ${tag}`;
+      document.getElementById("filterBanner").style.display = "flex";
+      showSection("fiches");
+      renderFiches();
+    }
+
+    function clearFilter() {
+      currentFilterTag = null;
+      document.getElementById("filterBanner").style.display = "none";
+      renderFiches();
+    }
+
+    function openNewFiche() {
+      document.getElementById("editFicheId").value = "";
+      document.getElementById("editorTitle").innerText = "Nouvelle fiche";
+      document.getElementById("ficheTitreInput").value = "";
+      document.getElementById("ficheContenuInput").value = "";
+      showSection("editor");
+    }
+
+    function editFiche(id) {
+      const f = allFiches.find(item => item.id === id);
+      if (!f) return;
+      document.getElementById("editFicheId").value = f.id;
+      document.getElementById("editorTitle").innerText = "Modifier la fiche";
+      document.getElementById("ficheTitreInput").value = f.titre;
+      document.getElementById("ficheContenuInput").value = f.contenu;
+      showSection("editor");
+    }
+
+    async function saveFiche() {
+      const id = document.getElementById("editFicheId").value;
+      const titre = document.getElementById("ficheTitreInput").value.trim();
+      const contenu = document.getElementById("ficheContenuInput").value.trim();
+
+      if (!titre || !contenu) { alert("Le titre et le contenu sont requis."); return; }
+
+      if (id) {
+        await client.from('fiches').update({ titre, contenu }).eq('id', id);
+      } else {
+        await client.from('fiches').insert([{ titre, contenu }]);
+      }
+      showSection("fiches");
+      loadFiches();
+    }
+
+    async function deleteFiche(id) {
+      if (!confirm("Supprimer cette fiche ?")) return;
+      await client.from('fiches').delete().eq('id', id);
+      loadFiches();
+    }
+
+    // ==========================================
+    // GESTION DE LA LISTE DE COURSES
+    // ==========================================
+    async function loadCourses() {
+      const { data, error } = await client.from('courses').select('*').order('created_at', { ascending: true });
+      if (error) { console.error(error); return; }
+      
+      const listEl = document.getElementById("coursesList");
+      const uncompletedCount = (data || []).filter(c => !c.coche).length;
+      document.getElementById("cartCount").innerText = uncompletedCount;
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:16px;">La liste est vide.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = data.map(item => `
+        <div class="course-item">
+          <div class="course-left" onclick="toggleCourse('${item.id}', ${!item.coche})">
+            <input type="checkbox" ${item.coche ? 'checked' : ''} onclick="event.stopPropagation(); toggleCourse('${item.id}', this.checked)">
+            <span class="course-text ${item.coche ? 'checked' : ''}">${escapeHtml(item.nom)}</span>
+          </div>
+          <button class="btn-delete-item" onclick="deleteCourse('${item.id}')">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function addCourse(nom) {
+      const cleanNom = nom.trim();
+      if (!cleanNom) return;
+      const { data } = await client.from('courses').select('id').ilike('nom', cleanNom);
+      if (data && data.length > 0) {
+        alert(`"${cleanNom}" est déjà dans la liste de courses.`);
+        return;
+      }
+      await client.from('courses').insert([{ nom: cleanNom, coche: false }]);
+      loadCourses();
+    }
+
+    function addCourseManual() {
+      const input = document.getElementById("newCourseInput");
+      if (input.value.trim()) {
+        addCourse(input.value.trim());
+        input.value = "";
+      }
+    }
+
+    async function toggleCourse(id, coche) {
+      await client.from('courses').update({ coche }).eq('id', id);
+      loadCourses();
+    }
+
+    async function deleteCourse(id) {
+      await client.from('courses').delete().eq('id', id);
+      loadCourses();
+    }
+
+    function confirmClearCourses() {
+      openModal("clearCoursesModal");
+    }
+
+    async function executeClearCourses() {
+      await client.from('courses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      closeModal("clearCoursesModal");
+      loadCourses();
+    }
+
+    // Utilitaires Modales & Formatage
+    function openModal(id) { document.getElementById(id).classList.add("active"); }
+    function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
