@@ -449,9 +449,29 @@
     }
 
     function getFicheCategories(f) {
-      if (Array.isArray(f.categories) && f.categories.length > 0) return f.categories;
-      if (f.categorie) return [f.categorie];
-      return ["🍽️ Plat"];
+      let rawCats = [];
+      if (Array.isArray(f.categories) && f.categories.length > 0) {
+        rawCats = f.categories;
+      } else if (f.categorie) {
+        rawCats = [f.categorie];
+      }
+
+      // Convertit les anciens formats sans émoji vers les catégories officielles
+      const cleanCats = rawCats.map(c => {
+        if (c === "Plat") return "🍽️ Plat";
+        if (c === "Astuce") return "💡 Astuce";
+        if (c === "Enfant") return "👧 Enfant";
+        if (c === "Entrée") return "🥗 Entrée";
+        if (c === "Accompagnement") return "🥔 Accompagnement";
+        if (c === "Snack") return "🍿 Snack";
+        if (c === "Dessert") return "🍰 Dessert";
+        if (c === "Apéro") return "🍸 Apéro";
+        return c;
+      });
+
+      // Garde uniquement les catégories reconnues et supprime les doublons
+      const valid = [...new Set(cleanCats.filter(c => CATEGORIES.includes(c)))];
+      return valid.length > 0 ? valid : ["🍽️ Plat"];
     }
 
     function renderFiches() {
