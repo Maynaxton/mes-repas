@@ -102,7 +102,7 @@
     }
     .search-clear-btn:hover { color: var(--text); }
 
-    /* Barre des pilules de catégories (défilement horizontal) */
+    /* Barre des pilules de catégories */
     .category-pills-bar {
       display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;
       scrollbar-width: none; -ms-overflow-style: none;
@@ -117,32 +117,26 @@
       background: var(--primary); color: white; border-color: var(--primary);
     }
 
-    /* Badges de catégorie dans les fiches */
+    /* Badges de catégorie */
     .card-categories {
-      display: flex; flex-wrap: wrap; gap: 4px;
+      display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
     }
     .cat-badge {
       font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
       background: #f1f5f9; color: #475569;
     }
 
-    /* Mode Détaillé */
+    /* Mode Cartes */
     .card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
       padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      position: relative;
+      cursor: pointer; transition: background 0.1s, transform 0.1s;
     }
-    .card-header-row {
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;
+    .card:hover, .card:active {
+      background: #fdfdfe;
     }
-    .card-title { font-size: 1.15rem; font-weight: 700; color: var(--text); }
-    .btn-edit-icon {
-      background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px;
-      padding: 4px 8px; font-size: 0.85rem; cursor: pointer; flex-shrink: 0;
-      transition: background 0.15s;
-    }
-    .btn-edit-icon:hover, .btn-edit-icon:active { background: #e2e8f0; }
-    .card-content { white-space: pre-wrap; line-height: 1.5; color: #334155; }
+    .card-title { font-size: 1.12rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .card-resume { font-size: 0.9rem; color: var(--text-muted); font-style: italic; line-height: 1.4; }
 
     /* Mode Compact */
     .compact-item {
@@ -208,6 +202,31 @@
     .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
     .modal-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
     .modal-buttons-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    /* Modale de lecture grand format */
+    .modal-reader-box {
+      background: var(--card-bg); border-radius: 14px; padding: 20px;
+      width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    }
+    .reader-header {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    }
+    .reader-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    .reader-scrollable {
+      overflow-y: auto; flex: 1; padding-right: 4px;
+    }
+    .reader-resume {
+      font-size: 0.95rem; color: var(--text-muted); font-style: italic; margin-bottom: 14px;
+      line-height: 1.45; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);
+    }
+    .reader-content {
+      white-space: pre-wrap; line-height: 1.6; font-size: 1rem; color: #334155;
+    }
+    .reader-footer {
+      display: flex; justify-content: flex-end; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
@@ -250,7 +269,7 @@
 
     <!-- Vue 2 : Formulaire Édition/Création -->
     <section id="sec-editor" class="view-section">
-      <div class="card">
+      <div class="card" style="cursor:default;">
         <h2 class="card-title" id="editorTitle">Nouvelle fiche</h2>
         <input type="hidden" id="editFicheId">
 
@@ -263,12 +282,17 @@
           <label>Titre de la fiche</label>
           <input type="text" id="ficheTitreInput" placeholder="Ex: Sauté de porc au curry">
         </div>
+
         <div class="form-group">
-          <label>Contenu (utilise # pour créer des mots-clés cliquables)</label>
+          <label>Résumé / Accroche courte (optionnel)</label>
+          <input type="text" id="ficheResumeInput" placeholder="Ex: 15 min de cuisson • Plat complet et économique">
+        </div>
+
+        <div class="form-group">
+          <label>Contenu complet (utilise # pour créer des mots-clés cliquables)</label>
           <textarea id="ficheContenuInput" placeholder="Ex: Découper le #porc en lamelles. Faire dorer avec du #curry et servir avec du #riz basmati."></textarea>
         </div>
 
-        <!-- Boutons d'actions : Supprimer (à gauche si édition) et Annuler/Enregistrer (à droite) -->
         <div class="editor-actions-row">
           <div>
             <button id="btnDeleteFicheInEditor" class="btn-danger" style="display:none;" onclick="deleteFicheCurrent()">🗑️ Supprimer</button>
@@ -283,7 +307,7 @@
 
     <!-- Vue 3 : Liste de courses -->
     <section id="sec-courses" class="view-section">
-      <div class="card">
+      <div class="card" style="cursor:default;">
         <h2 class="card-title" style="margin-bottom:12px;">🛒 Liste de courses</h2>
         <div class="add-course-bar">
           <input type="text" id="newCourseInput" placeholder="Ajouter un article...">
@@ -297,6 +321,28 @@
       </div>
     </section>
   </main>
+
+  <!-- Modale Lecture Plein Écran d'une Fiche -->
+  <div id="readerModal" class="modal-overlay">
+    <div class="modal-reader-box">
+      <div class="reader-header">
+        <div>
+          <div id="readerCategories" class="card-categories"></div>
+          <div id="readerTitle" class="reader-title"></div>
+        </div>
+        <button id="btnReaderEdit" class="btn-secondary" style="font-size:0.95rem; padding:6px 10px;" title="Modifier la fiche">✏️</button>
+      </div>
+
+      <div class="reader-scrollable">
+        <div id="readerResume" class="reader-resume" style="display:none;"></div>
+        <div id="readerContent" class="reader-content"></div>
+      </div>
+
+      <div class="reader-footer">
+        <button class="btn-secondary" onclick="closeModal('readerModal')">Fermer</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modale au clic sur un hashtag -->
   <div id="tagModal" class="modal-overlay">
@@ -345,9 +391,10 @@
     let allFiches = [];
     let currentFilterTag = null;
     let searchQuery = "";
-    let selectedCategories = []; // tableau vide = Tout
+    let selectedCategories = []; // vide = Tout
     let editorSelectedCategories = ["🍽️ Plat"];
     let displayMode = localStorage.getItem("displayMode") || "cards";
+    let activeReaderFicheId = null;
 
     // Initialisation
     window.addEventListener("DOMContentLoaded", () => {
@@ -495,7 +542,7 @@
       const listEl = document.getElementById("fichesList");
       let filtered = allFiches;
 
-      // 1. Filtrage par Catégories (sélection multiple)
+      // 1. Filtrage par Catégories
       if (selectedCategories.length > 0) {
         filtered = filtered.filter(f => {
           const cats = getFicheCategories(f);
@@ -508,10 +555,11 @@
         filtered = filtered.filter(f => f.contenu.toLowerCase().includes(currentFilterTag.toLowerCase()));
       }
 
-      // 3. Filtrage barre de recherche libre
+      // 3. Filtrage barre de recherche (titre, résumé, contenu)
       if (searchQuery) {
         filtered = filtered.filter(f => 
           f.titre.toLowerCase().includes(searchQuery) || 
+          (f.resume && f.resume.toLowerCase().includes(searchQuery)) ||
           f.contenu.toLowerCase().includes(searchQuery)
         );
       }
@@ -526,12 +574,12 @@
           const cats = getFicheCategories(f);
           const catBadges = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
           return `
-            <div class="compact-item" onclick="editFiche('${f.id}')">
+            <div class="compact-item" onclick="openFicheReader('${f.id}')">
               <div class="compact-left">
                 <div style="margin-bottom:2px;">${catBadges}</div>
                 <span class="compact-title">${escapeHtml(f.titre)}</span>
               </div>
-              <span class="compact-arrow">✏️</span>
+              <span class="compact-arrow">👁️</span>
             </div>
           `;
         }).join('');
@@ -539,18 +587,47 @@
         listEl.innerHTML = filtered.map(f => {
           const cats = getFicheCategories(f);
           const catBadges = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
+          const resumeHtml = f.resume ? `<div class="card-resume">${escapeHtml(f.resume)}</div>` : '';
+
           return `
-            <div class="card">
-              <div class="card-header-row">
-                <div class="card-categories">${catBadges}</div>
-                <button class="btn-edit-icon" onclick="editFiche('${f.id}')" title="Modifier la fiche">✏️</button>
-              </div>
+            <div class="card" onclick="openFicheReader('${f.id}')">
+              <div class="card-categories">${catBadges}</div>
               <div class="card-title">${escapeHtml(f.titre)}</div>
-              <div class="card-content">${formatHashtags(f.contenu)}</div>
+              ${resumeHtml}
             </div>
           `;
         }).join('');
       }
+    }
+
+    // ==========================================
+    // VUE DE LECTURE GRAND FORMAT
+    // ==========================================
+    function openFicheReader(id) {
+      const f = allFiches.find(item => item.id === id);
+      if (!f) return;
+      activeReaderFicheId = f.id;
+
+      const cats = getFicheCategories(f);
+      document.getElementById("readerCategories").innerHTML = cats.map(c => `<span class="cat-badge">${c}</span>`).join(' ');
+      document.getElementById("readerTitle").innerText = f.titre;
+
+      const resumeEl = document.getElementById("readerResume");
+      if (f.resume && f.resume.trim().length > 0) {
+        resumeEl.innerText = f.resume;
+        resumeEl.style.display = "block";
+      } else {
+        resumeEl.style.display = "none";
+      }
+
+      document.getElementById("readerContent").innerHTML = formatHashtags(f.contenu);
+
+      document.getElementById("btnReaderEdit").onclick = () => {
+        closeModal("readerModal");
+        editFiche(f.id);
+      };
+
+      openModal("readerModal");
     }
 
     function formatHashtags(text) {
@@ -561,6 +638,7 @@
     }
 
     function handleTagClick(word) {
+      closeModal("readerModal");
       document.getElementById("tagModalTitle").innerText = `Mot-clé : #${word}`;
       document.getElementById("btnTagAddToCart").onclick = () => {
         addCourse(word);
@@ -613,8 +691,9 @@
       document.getElementById("editFicheId").value = "";
       document.getElementById("editorTitle").innerText = "Nouvelle fiche";
       document.getElementById("ficheTitreInput").value = "";
+      document.getElementById("ficheResumeInput").value = "";
       document.getElementById("ficheContenuInput").value = "";
-      document.getElementById("btnDeleteFicheInEditor").style.display = "none"; // Masqué à la création
+      document.getElementById("btnDeleteFicheInEditor").style.display = "none";
       editorSelectedCategories = ["🍽️ Plat"];
       renderEditorCategories();
       showSection("editor");
@@ -626,8 +705,9 @@
       document.getElementById("editFicheId").value = f.id;
       document.getElementById("editorTitle").innerText = "Modifier la fiche";
       document.getElementById("ficheTitreInput").value = f.titre;
+      document.getElementById("ficheResumeInput").value = f.resume || "";
       document.getElementById("ficheContenuInput").value = f.contenu;
-      document.getElementById("btnDeleteFicheInEditor").style.display = "inline-block"; // Visible en modification
+      document.getElementById("btnDeleteFicheInEditor").style.display = "inline-block";
       editorSelectedCategories = getFicheCategories(f);
       renderEditorCategories();
       showSection("editor");
@@ -636,15 +716,16 @@
     async function saveFiche() {
       const id = document.getElementById("editFicheId").value;
       const titre = document.getElementById("ficheTitreInput").value.trim();
+      const resume = document.getElementById("ficheResumeInput").value.trim();
       const contenu = document.getElementById("ficheContenuInput").value.trim();
       const categories = editorSelectedCategories;
 
       if (!titre || !contenu) { alert("Le titre et le contenu sont requis."); return; }
 
       if (id) {
-        await client.from('fiches').update({ titre, contenu, categories }).eq('id', id);
+        await client.from('fiches').update({ titre, resume, contenu, categories }).eq('id', id);
       } else {
-        await client.from('fiches').insert([{ titre, contenu, categories }]);
+        await client.from('fiches').insert([{ titre, resume, contenu, categories }]);
       }
       showSection("fiches");
       loadFiches();
@@ -691,7 +772,7 @@
       if (!cleanNom) return;
       const { data } = await client.from('courses').select('id').ilike('nom', cleanNom);
       if (data && data.length > 0) {
-        alert(`"${cleanNom}" est déjà dans la liste de courses.`);
+        alert(`« ${cleanNom} » est déjà dans la liste de courses.`);
         return;
       }
       await client.from('courses').insert([{ nom: cleanNom, coche: false }]);
@@ -726,7 +807,7 @@
       loadCourses();
     }
 
-    // Utilitaires
+    // Utilitaires Modales & Formatage
     function openModal(id) { document.getElementById(id).classList.add("active"); }
     function closeModal(id) { document.getElementById(id).classList.remove("active"); }
     function escapeHtml(text) {
