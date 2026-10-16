@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>C'est l'heure de bien manger</title>
   
-  <!-- Icône de raccourci smartphone (Assiette & couverts) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
+  <!-- Icône personnalisée smartphone & onglet -->
+  <link rel="icon" type="image/png" sizes="512x512" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
 
   <!-- Client Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -20,6 +20,7 @@
       --text: #0f172a;
       --text-muted: #64748b;
       --border: #e2e8f0;
+      --border-dark: #cbd5e1;
       --danger: #ef4444;
       --danger-hover: #dc2626;
       --tag-bg: #e0e7ff;
@@ -41,20 +42,36 @@
 
     button {
       cursor: pointer; border: none; outline: none; border-radius: 8px;
-      padding: 8px 12px; font-weight: 600; font-size: 0.9rem; transition: background 0.15s;
+      padding: 8px 12px; font-weight: 600; font-size: 0.9rem;
+      transition: background 0.15s, transform 0.15s;
+    }
+    button:active {
+      transform: scale(0.96);
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-hover); }
     .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover, .btn-secondary:active { background: var(--border-dark); }
     .btn-danger { background: var(--danger); color: white; }
     .btn-danger:hover { background: var(--danger-hover); }
 
     .btn-cart {
       background: #f1f5f9; color: var(--text); position: relative; font-size: 1.1rem; padding: 8px 12px;
+      transition: background 0.15s, transform 0.15s;
     }
+    .btn-cart:hover, .btn-cart:active { background: #e2e8f0; }
     .cart-badge {
       position: absolute; top: -4px; right: -4px; background: var(--primary);
       color: white; font-size: 0.75rem; border-radius: 10px; padding: 2px 6px; font-weight: bold;
+    }
+
+    /* Animation rotation du bouton rafraîchir */
+    #btnRefresh {
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.4s ease;
+    }
+    #btnRefresh.spinning {
+      transform: rotate(360deg);
     }
 
     /* Conteneur principal */
@@ -89,7 +106,7 @@
       padding: 14px 16px; background: var(--card-bg); border: 1px solid var(--border);
       border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.1s;
     }
-    .compact-item:hover { background: #f1f5f9; }
+    .compact-item:hover, .compact-item:active { background: #f1f5f9; }
     .compact-title { font-weight: 600; font-size: 1rem; color: var(--text); }
     .compact-arrow { color: var(--text-muted); font-size: 0.9rem; }
 
@@ -97,9 +114,9 @@
     .hashtag-badge {
       display: inline-block; background: var(--tag-bg); color: var(--tag-text);
       padding: 2px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;
-      margin: 1px 2px; text-decoration: none;
+      margin: 1px 2px; text-decoration: none; transition: filter 0.15s;
     }
-    .hashtag-badge:hover { filter: brightness(0.95); }
+    .hashtag-badge:hover, .hashtag-badge:active { filter: brightness(0.9); }
 
     /* Formulaire d'édition */
     .form-group { margin-bottom: 14px; }
@@ -124,7 +141,7 @@
     .course-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
     .course-text.checked { text-decoration: line-through; color: var(--text-muted); }
     .btn-delete-item { background: transparent; color: var(--text-muted); padding: 4px 8px; font-size: 1.1rem; }
-    .btn-delete-item:hover { color: var(--danger); }
+    .btn-delete-item:hover, .btn-delete-item:active { color: var(--danger); }
 
     /* Modales */
     .modal-overlay {
@@ -147,7 +164,7 @@
   <header>
     <div class="brand" onclick="showSection('fiches')">🍽️ Mes Repas</div>
     <div class="header-actions">
-      <button class="btn-secondary" title="Rafraîchir les données" onclick="refreshData()">🔄</button>
+      <button id="btnRefresh" class="btn-secondary" title="Rafraîchir les données" onclick="refreshData()">🔄</button>
       <button class="btn-primary" onclick="openNewFiche()">+ Fiche</button>
       <button class="btn-cart" onclick="showSection('courses')">
         🛒<span id="cartCount" class="cart-badge">0</span>
@@ -270,7 +287,14 @@
     }
 
     async function refreshData() {
+      const btn = document.getElementById("btnRefresh");
+      if (btn) btn.classList.add("spinning");
+      
       await Promise.all([loadFiches(), loadCourses()]);
+      
+      setTimeout(() => {
+        if (btn) btn.classList.remove("spinning");
+      }, 400);
     }
 
     // Gestion du temps réel Supabase
@@ -363,7 +387,6 @@
     }
 
     function openFichePreview(id) {
-      // En mode compact, cliquer sur la ligne ouvre directement l'édition
       editFiche(id);
     }
 
